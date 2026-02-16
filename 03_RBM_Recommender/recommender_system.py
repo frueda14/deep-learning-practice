@@ -11,7 +11,7 @@ import os
 # 1. DESCARGA Y LECTURA MANUAL (A prueba de fallos)
 # ==========================================
 print("Descargando dataset... ⏳")
-# Esto solo baja los archivos a tu disco, no intenta leerlos (así no falla)
+# Baja los archivos a tu disco.
 path = kagglehub.dataset_download("zygmunt/goodbooks-10k")
 print(f"Dataset descargado en: {path}")
 
@@ -22,8 +22,8 @@ books_file = os.path.join(path, "books.csv")
 print("Leyendo archivos con Pandas (Modo tolerante)... 🐼")
 
 # LEEMOS MANUALMENTE CON PANDAS
-# encoding='latin-1': Para que no explote con tildes raras.
-# on_bad_lines='skip': La clave mágica. Si una línea está rota, la salta.
+# encoding='latin-1': Para que no falle con tildes raras.
+# on_bad_lines='skip':Si una línea está rota, la salta.
 ratings = pd.read_csv(ratings_file, encoding="latin-1", on_bad_lines='skip')
 books = pd.read_csv(books_file, encoding="latin-1", on_bad_lines='skip')
 
@@ -70,7 +70,7 @@ model.compile(optimizer='adam', loss='mean_squared_error')
 print("\nIniciando entrenamiento... 🚀")
 history = model.fit(
     X_train, X_train,
-    epochs=20, # Puedes bajarlo a 10 si tienes prisa
+    epochs=20,
     batch_size=64,
     validation_data=(X_test, X_test),
     verbose=1
