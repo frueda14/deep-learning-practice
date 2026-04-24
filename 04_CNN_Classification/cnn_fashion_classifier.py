@@ -5,50 +5,49 @@ from tensorflow.keras import layers, models, callbacks
 from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
 
-# Configuración para que se vea bonito en VS Code
 print(f"TensorFlow Version: {tf.__version__}")
 
-# 1. CARGAR DATOS (Fashion MNIST)
+# 1. LOAD DATA (Fashion MNIST)
 # ---------------------------------------------------------
-# Clases: 0:T-shirt/top, 1:Trouser, 2:Pullover, 3:Dress, 4:Coat,
+# Classes: 0:T-shirt/top, 1:Trouser, 2:Pullover, 3:Dress, 4:Coat,
 # 5:Sandal, 6:Shirt, 7:Sneaker, 8:Bag, 9:Ankle boot
-print("Cargando dataset Fashion MNIST...")
+print("Loading Fashion MNIST dataset...")
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
 
-# Normalizar los valores de píxeles (de 0-255 a 0-1)
+# Normalize pixel values from 0-255 to 0-1
 x_train = x_train.astype('float32') / 255.0
 x_test = x_test.astype('float32') / 255.0
 
-# Redimensionar: Las CNN esperan (Batch, Alto, Ancho, Canales)
-# Como es escala de grises, el canal es 1.
+# Reshape: CNNs expect (Batch, Height, Width, Channels)
+# Grayscale images have 1 channel.
 x_train = np.expand_dims(x_train, -1)
 x_test = np.expand_dims(x_test, -1)
 
-print(f"Forma de entrenamiento: {x_train.shape}")
-print(f"Forma de test: {x_test.shape}")
+print(f"Training shape: {x_train.shape}")
+print(f"Test shape: {x_test.shape}")
 
-# 2. CONSTRUIR LA CNN (Arquitectura "VGG-style" simplificada)
+# 2. BUILD THE CNN (Simplified "VGG-style" architecture)
 # ---------------------------------------------------------
 model = models.Sequential([
-    # Bloque Convolucional 1: Detecta bordes y texturas simples
+    # Convolutional Block 1: detects edges and simple textures
     layers.Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(28, 28, 1)),
-    layers.BatchNormalization(), # Ayuda a entrenar más rápido y estable
-    layers.MaxPooling2D((2, 2)), # Reduce a 14x14
-    
-    # Bloque Convolucional 2: Detecta formas más complejas (mangas, tacones)
+    layers.BatchNormalization(), # Speeds up training and improves stability
+    layers.MaxPooling2D((2, 2)), # Downsamples to 14x14
+
+    # Convolutional Block 2: detects more complex shapes (sleeves, heels)
     layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
     layers.BatchNormalization(),
-    layers.MaxPooling2D((2, 2)), # Reduce a 7x7
-    
-    # Bloque Convolucional 3
+    layers.MaxPooling2D((2, 2)), # Downsamples to 7x7
+
+    # Convolutional Block 3
     layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-    layers.MaxPooling2D((2, 2)), # Reduce a 3x3
-    
-    # Aplanar y Clasificar
+    layers.MaxPooling2D((2, 2)), # Downsamples to 3x3
+
+    # Flatten and classify
     layers.Flatten(),
     layers.Dense(128, activation='relu'),
-    layers.Dropout(0.4), # Apaga el 40% de neuronas al azar para evitar memorización (Overfitting)
-    layers.Dense(10, activation='softmax') # 10 neuronas = 10 tipos de ropa
+    layers.Dropout(0.4), # Randomly drops 40% of neurons to prevent overfitting
+    layers.Dense(10, activation='softmax') # 10 neurons = 10 clothing categories
 ])
 
 model.compile(optimizer='adam',
@@ -57,51 +56,51 @@ model.compile(optimizer='adam',
 
 model.summary()
 
-# 3. ENTRENAMIENTO (Con Early Stopping)
+# 3. TRAINING (With Early Stopping)
 # ---------------------------------------------------------
-# Si el 'val_loss' no mejora en 5 épocas, paramos para no perder tiempo.
+# Stop training if val_loss does not improve for 5 consecutive epochs.
 early_stopping = callbacks.EarlyStopping(
-    monitor='val_loss', 
-    patience=5, 
+    monitor='val_loss',
+    patience=5,
     restore_best_weights=True,
     verbose=1
 )
 
-print("\nIniciando entrenamiento... 🚀")
+print("\nStarting training... 🚀")
 history = model.fit(x_train, y_train,
-                    epochs=20, # Le damos hasta 20, pero el early_stopping probablemente pare antes
+                    epochs=20, # Up to 20 epochs; early stopping will likely trigger first
                     batch_size=64,
-                    validation_split=0.2, # Usamos 20% de train para validar mientras entrena
+                    validation_split=0.2, # Reserve 20% of training data for validation
                     callbacks=[early_stopping])
 
-# 4. EVALUACIÓN Y VISUALIZACIÓN
+# 4. EVALUATION AND VISUALIZATION
 # ---------------------------------------------------------
 test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
-print(f"\n✅ Precisión en Test: {test_acc*100:.2f}%")
+print(f"\n✅ Test Accuracy: {test_acc*100:.2f}%")
 
-# Gráficas de Aprendizaje
+# Learning curves
 plt.figure(figsize=(12, 4))
 
-# Gráfica de Loss (Error)
+# Loss curve
 plt.subplot(1, 2, 1)
 plt.plot(history.history['loss'], label='Train Loss')
 plt.plot(history.history['val_loss'], label='Val Loss')
-plt.title('Curva de Pérdida (Loss)')
-plt.xlabel('Época')
+plt.title('Loss Curve')
+plt.xlabel('Epoch')
 plt.legend()
 
-# Gráfica de Accuracy (Precisión)
+# Accuracy curve
 plt.subplot(1, 2, 2)
 plt.plot(history.history['accuracy'], label='Train Accuracy')
 plt.plot(history.history['val_accuracy'], label='Val Accuracy')
-plt.title('Curva de Precisión (Accuracy)')
-plt.xlabel('Época')
+plt.title('Accuracy Curve')
+plt.xlabel('Epoch')
 plt.legend()
 
 plt.tight_layout()
 plt.show()
 
-# 5. MATRIZ DE CONFUSIÓN (¿Qué ropa confunde con cuál?)
+# 5. CONFUSION MATRIX (Which clothing items get confused?)
 # ---------------------------------------------------------
 y_pred = model.predict(x_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
@@ -112,7 +111,7 @@ class_names = ['T-shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
 plt.figure(figsize=(10, 8))
 cm = confusion_matrix(y_test, y_pred_classes)
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
-plt.ylabel('Verdadero')
-plt.xlabel('Predicho')
-plt.title('Matriz de Confusión')
+plt.ylabel('True')
+plt.xlabel('Predicted')
+plt.title('Confusion Matrix')
 plt.show()
